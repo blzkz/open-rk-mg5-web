@@ -1,0 +1,8 @@
+services:
+  web:
+    build: .
+    image: open-rk-mg5-web
+    # Only reachable from this computer: WebHID needs https:// or localhost.
+    ports:
+      - "127.0.0.1:8080:80"
+    restart: unless-stopped

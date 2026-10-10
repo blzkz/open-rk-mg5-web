@@ -1,0 +1,12 @@
+{
+  "name": "Panel RK MG5",
+  "short_name": "RK MG5",
+  "description": "Panel de control para el ratón Royal Kludge MG5",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1011",
+  "theme_color": "#0b0c0d",
+  "lang": "es",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

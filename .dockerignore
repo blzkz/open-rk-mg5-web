@@ -1,0 +1,6 @@
+.git
+docs
+tests
+README.md
+compose.yaml
+Dockerfile

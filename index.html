@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel RK MG5</title>
+  <meta name="description" content="Panel de control web para el ratón Royal Kludge MG5: DPI, sondeo, sensor, energía, botones y perfiles.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0c0d">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="headerbar">
+    <div class="header-start">
+      <button type="button" class="icon-button" id="refresh" title="Volver a leer el ratón" aria-label="Volver a leer el ratón">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M12 1.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="linked profiles">
+        <select id="profile-select" title="Perfil activo" aria-label="Perfil activo"></select>
+        <div class="menu-wrap">
+          <button type="button" class="icon-button" id="profile-menu-button" title="Gestionar perfiles" aria-label="Gestionar perfiles" aria-haspopup="menu">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="3" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="8" cy="13" r="1.4"/></svg>
+          </button>
+          <div class="menu" id="profile-menu" role="menu" hidden>
+            <button type="button" role="menuitem" data-action="profile-new">Nuevo perfil con la configuración actual</button>
+            <button type="button" role="menuitem" data-action="profile-duplicate">Duplicar perfil</button>
+            <button type="button" role="menuitem" data-action="profile-rename">Renombrar perfil</button>
+            <button type="button" role="menuitem" data-action="profile-delete">Eliminar perfil</button>
+            <hr>
+            <button type="button" role="menuitem" data-action="profile-import">Importar perfil…</button>
+            <button type="button" role="menuitem" data-action="profile-export">Exportar perfil</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="header-title">
+      <div class="device-title">ROYAL KLUDGE MG5</div>
+      <div class="device-subtitle" id="connection-label">Sin conexión</div>
+    </div>
+    <div class="header-end">
+      <div class="battery" id="battery" title="Batería">
+        <span id="battery-label">—</span>
+        <svg class="battery-icon" viewBox="0 0 24 14" aria-hidden="true">
+          <rect x="1" y="1" width="19" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="21" y="4.5" width="2" height="5" rx="1" fill="currentColor"/>
+          <rect id="battery-fill" x="3" y="3" width="0" height="8" rx="1" fill="currentColor"/>
+          <path id="battery-bolt" d="M11.5 2.5 7.5 7.5h3l-1 4 4-5h-3z" fill="#0b0c0d" stroke="currentColor" stroke-width="0.8" hidden/>
+        </svg>
+      </div>
+      <div class="menu-wrap">
+        <button type="button" class="icon-button" id="main-menu-button" title="Menú principal" aria-label="Menú principal" aria-haspopup="menu">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <div class="menu end" id="main-menu" role="menu" hidden>
+          <button type="button" role="menuitem" data-action="forget">Olvidar este ratón</button>
+          <button type="button" role="menuitem" data-action="about">Acerca de Panel RK MG5</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabbar" role="tablist" aria-label="Secciones">
+    <button type="button" class="tab" role="tab" data-tab="customize">PERSONALIZAR</button>
+    <button type="button" class="tab" role="tab" data-tab="performance">RENDIMIENTO</button>
+    <button type="button" class="tab" role="tab" data-tab="sensor">SENSOR</button>
+    <button type="button" class="tab" role="tab" data-tab="power">ENERGÍA</button>
+  </nav>
+
+  <main>
+    <section class="status-page" id="status-page">
+      <img src="icon.svg" alt="" class="status-icon" width="112" height="112">
+      <h1 id="status-title">Conecta tu RK MG5</h1>
+      <p id="status-description">Pulsa el botón y elige el ratón en la lista del navegador.</p>
+      <pre class="rule" id="status-rule" hidden></pre>
+      <button type="button" class="pill suggested" id="status-action">Conectar ratón</button>
+    </section>
+
+    <section class="settings" id="settings" hidden>
+      <div class="side-panel">
+        <div class="panel" data-panel="customize">
+          <h2 class="panel-title">PERSONALIZAR</h2>
+          <p class="panel-subtitle">Haz clic en un botón del dibujo para cambiar lo que hace.</p>
+          <div class="section-label" id="button-title"></div>
+          <div id="action-groups"></div>
+          <div class="section-label">TECLADO</div>
+          <div class="boxed-list">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Tecla o combinación</div>
+                <div class="row-subtitle" id="key-subtitle">Asigna una tecla, con Ctrl/Mayús/Alt si quieres</div>
+              </div>
+              <button type="button" class="button" id="key-capture">Pulsa para grabar</button>
+            </div>
+          </div>
+          <button type="button" class="flat-button" id="reset-button">Restaurar este botón</button>
+        </div>
+
+        <div class="panel" data-panel="performance">
+          <h2 class="panel-title">RENDIMIENTO</h2>
+          <p class="panel-subtitle">Niveles de sensibilidad que recorre el botón DPI y tasa de sondeo.</p>
+          <div class="section-label">SENSIBILIDAD (DPI)</div>
+          <div class="boxed-list" id="dpi-list">
+            <div class="row">
+              <div class="row-text"><div class="row-title">Número de niveles</div></div>
+              <div class="spin" id="level-count" data-min="1" data-max="6" data-step="1"></div>
+            </div>
+          </div>
+          <div class="section-label">TASA DE SONDEO (Hz)</div>
+          <div class="segmented" id="rate-segments"></div>
+          <p class="panel-subtitle">Por encima de 1000 Hz el ratón gasta bastante más batería.</p>
+        </div>
+
+        <div class="panel" data-panel="sensor">
+          <h2 class="panel-title">SENSOR</h2>
+          <p class="panel-subtitle">Ajustes del sensor óptico y de los clics.</p>
+          <div class="section-label">DISTANCIA DE LEVANTAMIENTO (LOD)</div>
+          <div class="segmented" id="lod-segments"></div>
+          <div class="section-label">MODO DEL SENSOR</div>
+          <div class="segmented" id="mode-segments"></div>
+          <div class="section-label">AJUSTES</div>
+          <div class="boxed-list" id="sensor-options">
+            <div class="row">
+              <div class="row-text">
+                <div class="row-title">Debounce (ms)</div>
+                <div class="row-subtitle">Filtrado de rebotes de los clics</div>
+              </div>
+              <div class="spin" id="debounce" data-min="1" data-max="20" data-step="1"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="power">
+          <h2 class="panel-title">ENERGÍA</h2>
+          <p class="panel-subtitle">Batería y reposo del ratón.</p>
+          <div class="section-label">BATERÍA</div>
+          <div class="big-value" id="battery-big">—</div>
+          <div class="level-bar"><div class="level-fill" id="battery-bar"></div></div>
+          <p class="panel-subtitle" id="battery-state"></p>
+          <div class="section-label">REPOSO</div>
+          <div class="boxed-list">
+            <label class="row">
+              <div class="row-text"><div class="row-title">Dormir tras inactividad</div></div>
+              <select id="sleep-select"></select>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="mouse-stage" id="mouse-stage"></div>
+    </section>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <dialog id="name-dialog">
+    <form method="dialog">
+      <h3 id="name-dialog-title"></h3>
+      <input type="text" id="name-dialog-input" maxlength="60" required autocomplete="off">
+      <!-- Accept comes first so Enter picks it; the row is reversed visually. -->
+      <div class="dialog-buttons reverse">
+        <button type="submit" value="ok" class="button suggested">Aceptar</button>
+        <button type="submit" value="cancel" class="button" formnovalidate>Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog">
+    <form method="dialog">
+      <h3 id="confirm-dialog-title"></h3>
+      <p id="confirm-dialog-body"></p>
+      <div class="dialog-buttons">
+        <button type="submit" value="cancel" class="button">Cancelar</button>
+        <button type="submit" value="ok" class="button destructive" id="confirm-dialog-ok">Eliminar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="about-dialog" class="about">
+    <form method="dialog">
+      <img src="icon.svg" alt="" width="96" height="96">
+      <h3>Panel RK MG5</h3>
+      <p class="version">Versión web <span id="about-version"></span></p>
+      <p>Panel de control de código abierto para el ratón Royal Kludge MG5: DPI, sondeo, sensor, energía,
+        botones y perfiles. Funciona en el navegador con WebHID, sin instalar nada.</p>
+      <p class="small">Royal Kludge y MG5 son marcas de sus respectivos propietarios. Este proyecto no está
+        afiliado ni respaldado por Royal Kludge. El protocolo HID se ha documentado a partir del configurador
+        web oficial y de pruebas con el propio ratón, con fines de interoperabilidad.</p>
+      <p class="small">© 2026 blzkz · Licencia GPL-3.0-or-later ·
+        <a href="https://github.com/blzkz/open-rk-mg5-control-panel" target="_blank" rel="noopener">App de escritorio para Linux</a></p>
+      <div class="dialog-buttons">
+        <button type="submit" class="button">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="import-input" accept="application/json,.json" hidden>
+</body>
+</html>
