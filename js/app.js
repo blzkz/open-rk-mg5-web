@@ -7,6 +7,10 @@ import { ProfileStore, applyProfile, normalizeProfile, profileFromMouse, rgbFrom
 
 const VERSION = "0.1.0";
 const UDEV_RULE = 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="372e", ATTRS{idProduct}=="103f|1073", TAG+="uaccess"';
+const UDEV_COMMAND =
+  `echo '${UDEV_RULE}' | sudo tee /etc/udev/rules.d/70-rk-mg5.rules\n` +
+  "sudo udevadm control --reload-rules && sudo udevadm trigger";
+const IS_LINUX = /Linux/.test(navigator.userAgent) && !/Android|CrOS/.test(navigator.userAgent);
 const BATTERY_POLL_MS = 60_000;
 const DPI_APPLY_DELAY_MS = 500;
 const OFFLINE_RETRY_MS = 3000;
@@ -268,13 +272,12 @@ function selectTab(name) {
 
 // -- connection ----------------------------------------------------------------
 
-function showStatus(title, description, { action = "Reintentar", onAction = reconnect, rule = false } = {}) {
+function showStatus(title, description, { action = "Reintentar", onAction = reconnect, linuxHelp = false } = {}) {
   clearTimeout(state.retryTimer);
   state.config = null;
   $("status-title").textContent = title;
   $("status-description").textContent = description;
-  $("status-rule").textContent = UDEV_RULE;
-  $("status-rule").hidden = !rule;
+  $("linux-help").hidden = !linuxHelp;
   const button = $("status-action");
   button.hidden = !action;
   button.textContent = action || "";
@@ -325,20 +328,31 @@ async function disconnectMouse() {
   }
 }
 
-async function connectDevice(device) {
+// `retrying` is set by the automatic retries while the permission instructions are on screen.
+async function connectDevice(device, { retrying = false } = {}) {
   await disconnectMouse();
   const mouse = new p.MG5(device);
   try {
     await mouse.open();
   } catch (e) {
-    const linux = /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
-    showStatus(
-      "Sin permiso para acceder al ratón",
-      linux
-        ? "El navegador no puede abrir el ratón. Añade esta regla udev en /etc/udev/rules.d/70-rk-mg5.rules, recarga udev y vuelve a conectar el receptor:"
-        : `El navegador no puede abrir el ratón (${e.message}). Cierra otras apps que lo estén usando y vuelve a intentarlo.`,
-      { rule: linux, onAction: () => connectDevice(device) },
-    );
+    if (!IS_LINUX) {
+      showStatus(
+        "No se puede abrir el ratón",
+        `El navegador no ha podido abrirlo (${e.message}). Cierra otras apps que lo estén usando y vuelve a intentarlo.`,
+        { onAction: () => connectDevice(device) },
+      );
+      return;
+    }
+    // On Linux this almost always means /dev/hidraw is root-only: explain how to allow it,
+    // then keep trying so the panel connects by itself once the rule is in place.
+    if (!retrying) {
+      showStatus(
+        "Falta darle permiso al navegador",
+        "Linux no deja que las páginas web usen el ratón hasta que le das permiso a tu usuario. Sigue estos pasos:",
+        { action: "Reintentar ahora", onAction: () => connectDevice(device), linuxHelp: true },
+      );
+    }
+    state.retryTimer = setTimeout(() => connectDevice(device, { retrying: true }), OFFLINE_RETRY_MS);
     return;
   }
   state.mouse = mouse;
@@ -704,6 +718,15 @@ async function init() {
     if (file) importProfile(file);
   });
   $("refresh").addEventListener("click", reconnect);
+  $("udev-command").textContent = UDEV_COMMAND;
+  $("copy-command").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(UDEV_COMMAND);
+      toast("Copiado: pégalo en una terminal");
+    } catch {
+      toast("No se pudo copiar: selecciónalo y cópialo a mano");
+    }
+  });
 
   if (!("hid" in navigator)) {
     const reason = window.isSecureContext

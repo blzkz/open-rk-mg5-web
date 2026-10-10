@@ -35,7 +35,11 @@ echo 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="372e", ATTRS{idProduct}=="103f|1073
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-Después desconecta y vuelve a conectar el receptor. Si ya tienes instalada la app de escritorio, la regla ya está puesta.
+Si falta, la propia página lo detecta y muestra estos pasos con un botón para copiar el comando, y se conecta sola
+en cuanto tiene permiso. Si no lo hace, desconecta y vuelve a conectar el receptor. Si ya tienes instalada la app de
+escritorio, la regla ya está puesta.
+
+En Windows, macOS y ChromeOS no hace falta nada de esto.
 
 ### Perfiles
 

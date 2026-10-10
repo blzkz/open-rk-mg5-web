@@ -74,7 +74,25 @@
       <img src="icon.svg" alt="" class="status-icon" width="112" height="112">
       <h1 id="status-title">Conecta tu RK MG5</h1>
       <p id="status-description">Pulsa el botón y elige el ratón en la lista del navegador.</p>
-      <pre class="rule" id="status-rule" hidden></pre>
+      <div class="linux-help" id="linux-help" hidden>
+        <ol class="steps">
+          <li>
+            <strong>Abre una terminal y ejecuta estas dos líneas.</strong>
+            Crean una regla que deja a tu usuario usar el ratón sin ser root. Te pedirá tu contraseña.
+            <div class="command">
+              <pre id="udev-command"></pre>
+              <button type="button" class="button" id="copy-command">Copiar</button>
+            </div>
+          </li>
+          <li>
+            <strong>Vuelve a esta página.</strong> Se conectará sola en cuanto tenga permiso. Si al cabo de unos
+            segundos no lo hace, desconecta el receptor 2.4G (o el cable) y vuelve a conectarlo.
+          </li>
+        </ol>
+        <p class="small-print">Solo hay que hacerlo una vez por equipo. Si instalas la
+          <a href="https://github.com/blzkz/open-rk-mg5-control-panel" target="_blank" rel="noopener">app de escritorio</a>
+          con su paquete, la regla ya viene incluida.</p>
+      </div>
       <button type="button" class="pill suggested" id="status-action">Conectar ratón</button>
     </section>
 

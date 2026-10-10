@@ -185,7 +185,8 @@ main { flex: 1; min-height: 0; display: flex; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
+  overflow-y: auto;
   gap: 12px;
   padding: 24px 16px;
   text-align: center;
@@ -193,16 +194,32 @@ main { flex: 1; min-height: 0; display: flex; }
 .status-page h1 { margin: 12px 0 0; font-size: 26px; }
 .status-page p { margin: 0; max-width: 560px; color: var(--text-dim); }
 .status-icon { opacity: 0.9; }
-.rule {
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 10px 14px;
+.linux-help { width: min(640px, 100%); text-align: left; }
+.steps { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; color: var(--text-dim); }
+.steps li::marker { color: var(--accent); font-weight: 800; }
+.steps strong { display: block; color: var(--text); margin-bottom: 2px; }
+.command {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 10px 10px 14px;
   border-radius: 8px;
   background: var(--card-bg);
-  font: 12px/1.5 ui-monospace, "JetBrains Mono", monospace;
-  user-select: all;
-  text-align: left;
 }
+.command pre {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font: 12px/1.6 ui-monospace, "JetBrains Mono", monospace;
+  user-select: all;
+}
+.command .button { flex: none; padding: 5px 12px; font-size: 12px; }
+.small-print { margin: 16px 0 0 !important; font-size: 12px; text-align: left; }
+.small-print a { color: var(--accent); }
 
 /* -- widgets ---------------------------------------------------------------- */
 
