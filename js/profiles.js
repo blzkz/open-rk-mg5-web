@@ -14,6 +14,7 @@ export const rgbFromHex = (value) => [1, 3, 5].map((i) => parseInt(value.slice(i
 export function defaultProfile(name) {
   return {
     name,
+    model: p.MG5_MODEL.name,
     report_rate: 1000,
     dpi_level_count: 6,
     active_dpi_level: 1,
@@ -31,10 +32,11 @@ export function defaultProfile(name) {
   };
 }
 
-export function profileFromMouse(name, config, keys) {
+export function profileFromMouse(name, config, keys, model = p.MG5_MODEL.name) {
   const levels = Array.from({ length: p.DPI_LEVELS }, (_, i) => i + 1);
   return {
     name,
+    model,
     report_rate: config.reportRate,
     dpi_level_count: config.dpiLevelCount,
     active_dpi_level: config.dpiLevel,
@@ -75,11 +77,16 @@ function performanceByte(profile) {
 
 // Writes only the settings that differ from what the mouse currently has.
 export async function applyProfile(profile, mouse) {
+  if (profile.model !== mouse.model.name) {
+    throw new p.MG5Error(`El perfil «${profile.name}» es de un ${profile.model}, no de un ${mouse.model.name}`);
+  }
   const config = await mouse.readConfig();
-  const keys = await mouse.readKeys();
-  for (const [index, value] of profile.buttons.entries()) {
-    const raw = parseInt(value, 16) >>> 0;
-    if (keys[index] !== raw) await mouse.setKey(index, raw);
+  if (mouse.model.keyRemap) {
+    const keys = await mouse.readKeys();
+    for (const [index, value] of profile.buttons.entries()) {
+      const raw = parseInt(value, 16) >>> 0;
+      if (keys[index] !== raw) await mouse.setKey(index, raw);
+    }
   }
   for (let level = 1; level <= p.DPI_LEVELS; level++) {
     const dpi = profile.dpi_levels[level - 1];
@@ -95,7 +102,7 @@ export async function applyProfile(profile, mouse) {
   if (config.sleepSeconds !== profile.sleep_seconds) await mouse.setSleep(profile.sleep_seconds);
   const count = Math.max(1, Math.min(p.DPI_LEVELS, profile.dpi_level_count));
   const active = Math.max(1, Math.min(count, profile.active_dpi_level));
-  if (config.dpiLevelCount !== count) await mouse.writeConfig(p.OFF_DPI_LEVEL, [(config.dpiLevel << 4) | count]);
+  if (config.dpiLevelCount !== count) await mouse.setDpiLevelRaw((config.dpiLevel << 4) | count);
   // Selecting the level makes the new DPI value take effect.
   await mouse.activateDpiLevel(await mouse.readConfig(), active);
 }
