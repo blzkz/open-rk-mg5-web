@@ -1,12 +1,22 @@
 # Open RK MG5 Web
 
-Panel de control en el navegador para el ratón **Royal Kludge MG5**, usando [WebHID](https://developer.mozilla.org/docs/Web/API/WebHID_API).
+Panel de control en el navegador para el ratón **Royal Kludge MG5** (y, de forma experimental, el **RK M30**), usando [WebHID](https://developer.mozilla.org/docs/Web/API/WebHID_API).
 Es la versión web de [Open RK MG5 Control Panel](https://github.com/blzkz/open-rk-mg5-control-panel) (la app de escritorio para Linux)
 y hace lo mismo sin instalar nada: DPI por niveles, colores, frecuencia de sondeo, LOD, debounce, modo del sensor,
 Motion Sync, Ripple Control, corrección de ángulo, modo cristal, reposo, reasignación de los seis botones y perfiles.
 
-Funciona con el receptor 2.4G (`372e:103f`) y, en principio, por cable (`372e:1073`, aún sin probar).
+## Ratones compatibles
+
+| Ratón | Receptor 2.4G | Cable | Estado |
+|---|---|---|---|
+| Royal Kludge MG5 | `372e:103f` | `372e:1073` | Probado por el receptor 2.4G; por cable, aún sin probar |
+| Royal Kludge M30 | `258a:0138` | `258a:0136` | **Nuevo, experimental**: sin probar todavía con un ratón real ([detalles](#rk-m30-experimental-sin-probar)) |
+
 El protocolo está documentado en [docs/PROTOCOL.md](docs/PROTOCOL.md).
+
+¿Tienes un M30? Antes de cambiar nada, comprueba que el panel lee bien sus valores y, si puedes, prueba la lectura con la
+[app de escritorio](https://github.com/blzkz/open-rk-mg5-control-panel) (`python3 -m rk_mg5 --probe`, no escribe en el ratón).
+Cuéntanos el resultado en un [issue](https://github.com/blzkz/open-rk-mg5-web/issues).
 
 ### RK M30 (experimental, sin probar)
 
