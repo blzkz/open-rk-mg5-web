@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Panel RK MG5</title>
-  <meta name="description" content="Panel de control web para el ratón Royal Kludge MG5: DPI, sondeo, sensor, energía, botones y perfiles.">
+  <meta name="description" content="Panel de control web para el ratón Royal Kludge MG5 (y RK M30, experimental): DPI, sondeo, sensor, energía, botones y perfiles.">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0c0d">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -37,7 +37,7 @@
       </div>
     </div>
     <div class="header-title">
-      <div class="device-title">ROYAL KLUDGE MG5</div>
+      <div class="device-title" id="device-title">ROYAL KLUDGE MG5</div>
       <div class="device-subtitle" id="connection-label">Sin conexión</div>
     </div>
     <div class="header-end">
@@ -69,11 +69,15 @@
     <button type="button" class="tab" role="tab" data-tab="power">ENERGÍA</button>
   </nav>
 
+  <div class="banner" id="experimental-banner" role="status" hidden>
+    Soporte experimental para el <span id="experimental-model"></span>: aún sin probar con un ratón real.
+  </div>
+
   <main>
     <section class="status-page" id="status-page">
       <img src="icon.svg" alt="" class="status-icon" width="112" height="112">
-      <h1 id="status-title">Conecta tu RK MG5</h1>
-      <p id="status-description">Pulsa el botón y elige el ratón en la lista del navegador.</p>
+      <h1 id="status-title">Conecta tu ratón RK</h1>
+      <p id="status-description">Pulsa el botón y elige el ratón (RK MG5 o RK M30) en la lista del navegador.</p>
       <div class="linux-help" id="linux-help" hidden>
         <ol class="steps">
           <li>
@@ -101,6 +105,9 @@
         <div class="panel" data-panel="customize">
           <h2 class="panel-title">PERSONALIZAR</h2>
           <p class="panel-subtitle">Haz clic en un botón del dibujo para cambiar lo que hace.</p>
+          <p class="panel-subtitle" id="remap-notice" hidden>Este ratón no permite leer qué hace cada botón, así que la
+            reasignación está desactivada para no sobrescribir su configuración a ciegas.</p>
+          <div id="remap-controls" class="remap-controls">
           <div class="section-label" id="button-title"></div>
           <div id="action-groups"></div>
           <div class="section-label">TECLADO</div>
@@ -114,6 +121,7 @@
             </div>
           </div>
           <button type="button" class="flat-button" id="reset-button">Restaurar este botón</button>
+          </div>
         </div>
 
         <div class="panel" data-panel="performance">
@@ -128,7 +136,7 @@
           </div>
           <div class="section-label">TASA DE SONDEO (Hz)</div>
           <div class="segmented" id="rate-segments"></div>
-          <p class="panel-subtitle">Por encima de 1000 Hz el ratón gasta bastante más batería.</p>
+          <p class="panel-subtitle" id="rate-hint">Por encima de 1000 Hz el ratón gasta bastante más batería.</p>
         </div>
 
         <div class="panel" data-panel="sensor">
@@ -136,7 +144,7 @@
           <p class="panel-subtitle">Ajustes del sensor óptico y de los clics.</p>
           <div class="section-label">DISTANCIA DE LEVANTAMIENTO (LOD)</div>
           <div class="segmented" id="lod-segments"></div>
-          <div class="section-label">MODO DEL SENSOR</div>
+          <div class="section-label" id="mode-label">MODO DEL SENSOR</div>
           <div class="segmented" id="mode-segments"></div>
           <div class="section-label">AJUSTES</div>
           <div class="boxed-list" id="sensor-options">
@@ -153,10 +161,12 @@
         <div class="panel" data-panel="power">
           <h2 class="panel-title">ENERGÍA</h2>
           <p class="panel-subtitle">Batería y reposo del ratón.</p>
-          <div class="section-label">BATERÍA</div>
-          <div class="big-value" id="battery-big">—</div>
-          <div class="level-bar"><div class="level-fill" id="battery-bar"></div></div>
-          <p class="panel-subtitle" id="battery-state"></p>
+          <div class="battery-section" id="battery-section">
+            <div class="section-label">BATERÍA</div>
+            <div class="big-value" id="battery-big">—</div>
+            <div class="level-bar"><div class="level-fill" id="battery-bar"></div></div>
+            <p class="panel-subtitle" id="battery-state"></p>
+          </div>
           <div class="section-label">REPOSO</div>
           <div class="boxed-list">
             <label class="row">
@@ -202,8 +212,9 @@
       <h3>Panel RK MG5</h3>
       <p class="version">Versión web <span id="about-version"></span></p>
       <p>Panel de control de código abierto para el ratón Royal Kludge MG5: DPI, sondeo, sensor, energía,
-        botones y perfiles. Funciona en el navegador con WebHID, sin instalar nada.</p>
-      <p class="small">Royal Kludge y MG5 son marcas de sus respectivos propietarios. Este proyecto no está
+        botones y perfiles. Funciona en el navegador con WebHID, sin instalar nada. El RK M30 tiene soporte
+        experimental, aún sin probar con un ratón real.</p>
+      <p class="small">Royal Kludge, MG5 y M30 son marcas de sus respectivos propietarios. Este proyecto no está
         afiliado ni respaldado por Royal Kludge. El protocolo HID se ha documentado a partir del configurador
         web oficial y de pruebas con el propio ratón, con fines de interoperabilidad.</p>
       <p class="small">© 2026 blzkz · Licencia GPL-3.0-or-later ·

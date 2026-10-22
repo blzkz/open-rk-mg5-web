@@ -1,4 +1,4 @@
-// Web (WebHID) control panel for the Royal Kludge MG5, laid out like Synapse / G Hub.
+// Web (WebHID) control panel for Royal Kludge mice (MG5, experimental M30), laid out like Synapse / G Hub.
 
 import * as a from "./actions.js";
 import * as p from "./protocol.js";
@@ -6,10 +6,14 @@ import { MouseView } from "./mouse-view.js";
 import { ProfileStore, applyProfile, normalizeProfile, profileFromMouse, rgbFromHex } from "./profiles.js";
 
 const VERSION = "0.1.0";
-const UDEV_RULE = 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="372e", ATTRS{idProduct}=="103f|1073", TAG+="uaccess"';
+const UDEV_RULES = [
+  'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="372e", ATTRS{idProduct}=="103f|1073", TAG+="uaccess"',
+  'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="258a", ATTRS{idProduct}=="0136|0138", TAG+="uaccess"',
+];
 const UDEV_COMMAND =
-  `echo '${UDEV_RULE}' | sudo tee /etc/udev/rules.d/70-rk-mg5.rules\n` +
+  `printf '%s\\n' ${UDEV_RULES.map((rule) => `'${rule}'`).join(" ")} | sudo tee /etc/udev/rules.d/70-rk-mg5.rules\n` +
   "sudo udevadm control --reload-rules && sudo udevadm trigger";
+const NOT_FOUND = "Conecta el receptor 2.4G o el cable del RK MG5 (o del RK M30, experimental).";
 const IS_LINUX = /Linux/.test(navigator.userAgent) && !/Android|CrOS/.test(navigator.userAgent);
 const BATTERY_POLL_MS = 60_000;
 const DPI_APPLY_DELAY_MS = 500;
@@ -73,6 +77,11 @@ function spin(container, { min, max, step, delay = 300, onChange }) {
       input.value = value;
       refresh();
     },
+    configure(limits) {
+      ({ min, max, step } = { min, max, step, ...limits });
+      Object.assign(input, { min, max, step });
+      refresh();
+    },
   };
 }
 
@@ -90,6 +99,7 @@ function segmented(container, labels, onSelect) {
     return button;
   });
   return {
+    buttons,
     set(index) {
       buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(i === index)));
     },
@@ -244,18 +254,20 @@ function buildSensor() {
       apply((m, c) => m.setPerformance(enabled ? c.performance | mask : c.performance & ~mask));
     });
     list.append(row);
-    ui.flags.push({ mask, input });
+    ui.flags.push({ mask, input, row });
   }
+}
+
+function fillSleepOptions(times) {
+  ui.sleepTimes = times;
+  $("sleep-select").replaceChildren(
+    ...times.map((seconds) => new Option(seconds === 0 ? "Desactivado" : seconds < 60 ? `${seconds} s` : `${seconds / 60} min`, seconds)),
+  );
 }
 
 function buildPower() {
   const select = $("sleep-select");
-  for (const seconds of p.SLEEP_TIMES) {
-    const option = document.createElement("option");
-    option.value = seconds;
-    option.textContent = seconds === 0 ? "Desactivado" : seconds < 60 ? `${seconds} s` : `${seconds / 60} min`;
-    select.append(option);
-  }
+  fillSleepOptions(p.SLEEP_TIMES);
   select.addEventListener("change", () => {
     const seconds = Number(select.value);
     apply((m) => m.setSleep(seconds));
@@ -266,8 +278,28 @@ function selectTab(name) {
   state.tab = name;
   for (const tab of document.querySelectorAll(".tab")) tab.setAttribute("aria-selected", String(tab.dataset.tab === name));
   for (const panel of document.querySelectorAll(".panel")) panel.hidden = panel.dataset.panel !== name;
-  mouseView.setCalloutsVisible(name === "customize");
+  mouseView.setCalloutsVisible(name === "customize" && (!state.mouse || state.mouse.model.keyRemap));
   updateBadge();
+}
+
+// Shows only the options the connected model has.
+function applyModel(model) {
+  $("device-title").textContent = "ROYAL KLUDGE " + model.name.split(" ").pop();
+  $("experimental-banner").hidden = !model.experimental;
+  $("experimental-model").textContent = model.name;
+  $("battery").hidden = !model.battery;
+  $("battery-section").hidden = !model.battery;
+  $("remap-notice").hidden = model.keyRemap;
+  $("remap-controls").hidden = !model.keyRemap;
+  for (const { dpi } of ui.levelRows) dpi.configure({ min: model.dpiMin, max: model.dpiMax, step: model.dpiStep });
+  ui.rates.forEach((hz, i) => (ui.rateSegments.buttons[i].hidden = !model.reportRates.includes(hz)));
+  $("rate-hint").hidden = Math.max(...model.reportRates) <= 1000;
+  $("mode-label").hidden = !model.sensorMode;
+  $("mode-segments").hidden = !model.sensorMode;
+  for (const { mask, row } of ui.flags) row.hidden = mask === p.PERF_GLASS_MODE && !model.glassMode;
+  ui.debounce.configure({ max: model.debounceMax });
+  if (ui.sleepTimes.join() !== model.sleepTimes.join()) fillSleepOptions(model.sleepTimes);
+  selectTab(state.tab);
 }
 
 // -- connection ----------------------------------------------------------------
@@ -295,11 +327,12 @@ function showSettings() {
   document.querySelector(".tabbar").classList.remove("disabled");
   $("profile-select").disabled = false;
   $("connection-label").textContent = state.mouse.wireless ? "Receptor 2.4G" : "Cable USB";
+  applyModel(state.mouse.model);
   mouseView.layout();
 }
 
 function showNotConnected() {
-  showStatus("Conecta tu RK MG5", "Pulsa el botón y elige el ratón en la lista del navegador.", {
+  showStatus("Conecta tu ratón RK", "Pulsa el botón y elige el ratón (RK MG5 o RK M30) en la lista del navegador.", {
     action: "Conectar ratón",
     onAction: requestMouse,
   });
@@ -331,7 +364,7 @@ async function disconnectMouse() {
 // `retrying` is set by the automatic retries while the permission instructions are on screen.
 async function connectDevice(device, { retrying = false } = {}) {
   await disconnectMouse();
-  const mouse = new p.MG5(device);
+  const mouse = p.openMouse(device);
   try {
     await mouse.open();
   } catch (e) {
@@ -381,8 +414,8 @@ async function loadFromMouse({ quiet = false } = {}) {
       // Cheap check so a sleeping mouse doesn't block on every retry.
       if (mouse.wireless && !(await mouse.isOnline(300))) throw new p.MouseOffline();
       state.config = await mouse.readConfig();
-      state.keys = await mouse.readKeys();
-      battery = await mouse.readBattery();
+      state.keys = await readKeys(mouse);
+      battery = mouse.model.battery ? await mouse.readBattery() : null;
     });
   } catch (e) {
     if (state.mouse !== mouse || quiet) return;
@@ -395,11 +428,16 @@ async function loadFromMouse({ quiet = false } = {}) {
     return;
   }
   if (state.mouse !== mouse) return;
-  showBattery(battery);
+  if (battery) showBattery(battery);
   loadConfig();
   loadKeys();
   showSettings();
   ensureProfile();
+}
+
+// Without a way to read the buttons, keep the factory layout just for the labels.
+async function readKeys(mouse) {
+  return mouse.model.keyRemap ? await mouse.readKeys() : [...a.DEFAULT_KEYS];
 }
 
 function onInputReport(event) {
@@ -437,7 +475,7 @@ function loadConfig() {
   ui.modeSegments.set(ui.modes.indexOf(c.sensorMode));
   ui.debounce.set(c.debounce);
   for (const { mask, input } of ui.flags) input.checked = c.flag(mask);
-  const nearest = p.SLEEP_TIMES.reduce((best, s) => (Math.abs(s - c.sleepSeconds) < Math.abs(best - c.sleepSeconds) ? s : best));
+  const nearest = ui.sleepTimes.reduce((best, s) => (Math.abs(s - c.sleepSeconds) < Math.abs(best - c.sleepSeconds) ? s : best));
   $("sleep-select").value = nearest;
   updateBadge();
 }
@@ -472,7 +510,7 @@ function showBattery({ percent, charging }) {
 
 async function pollBattery() {
   const mouse = state.mouse;
-  if (!mouse || !state.config) return;
+  if (!mouse || !state.config || !mouse.model.battery) return;
   try {
     showBattery(await mouse.exclusive(() => mouse.readBattery()));
   } catch {
@@ -492,7 +530,7 @@ async function apply(write) {
       await mouse.ensureAwake();
       await write(mouse, state.config);
       state.config = await mouse.readConfig();
-      state.keys = await mouse.readKeys();
+      state.keys = await readKeys(mouse);
     });
     ok = true;
     autosaveProfile();
@@ -569,15 +607,17 @@ function ensureProfile() {
     refreshProfiles();
     return;
   }
-  profiles.save(profileFromMouse("Predeterminado", state.config, state.keys));
+  profiles.save(profileFromMouse("Predeterminado", state.config, state.keys, state.mouse.model.name));
   profiles.setActive("Predeterminado");
   refreshProfiles();
 }
 
 function autosaveProfile() {
   const name = profiles.active;
-  if (state.autosave && name && profiles.get(name) && state.config) {
-    profiles.save(profileFromMouse(name, state.config, state.keys));
+  const profile = name ? profiles.get(name) : null;
+  // Never overwrite a profile of another model with this mouse's settings.
+  if (state.autosave && profile && state.config && state.mouse && profile.model === state.mouse.model.name) {
+    profiles.save(profileFromMouse(name, state.config, state.keys, profile.model));
   }
 }
 
@@ -599,14 +639,16 @@ async function switchProfile(name) {
 
 const MENU_ACTIONS = {
   async "profile-new"() {
-    if (!state.config) {
+    if (!state.config || !state.mouse) {
       toast("Conecta el ratón para crear un perfil");
       return;
     }
+    const { config, keys } = state;
+    const model = state.mouse.model.name;
     const name = await askName("Nuevo perfil", profiles.uniqueName("Perfil"));
     if (!name) return;
     const unique = profiles.uniqueName(name);
-    profiles.save(profileFromMouse(unique, state.config, state.keys));
+    profiles.save(profileFromMouse(unique, config, [...keys], model));
     profiles.setActive(unique);
     refreshProfiles();
   },
@@ -739,7 +781,7 @@ async function init() {
   navigator.hid.addEventListener("disconnect", (e) => {
     if (state.mouse && e.device === state.mouse.device) {
       disconnectMouse();
-      showStatus("No se encuentra el ratón", "Conecta el receptor 2.4G o el cable del RK MG5.", {
+      showStatus("No se encuentra el ratón", NOT_FOUND, {
         action: "Conectar ratón",
         onAction: requestMouse,
       });
