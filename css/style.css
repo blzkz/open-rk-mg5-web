@@ -203,7 +203,8 @@ main { flex: 1; min-height: 0; display: flex; }
 .status-page h1 { margin: 12px 0 0; font-size: 26px; }
 .status-page p { margin: 0; max-width: 560px; color: var(--text-dim); }
 .status-icon { opacity: 0.9; }
-.linux-help { width: min(640px, 100%); text-align: left; }
+.linux-help,
+.device-info { width: min(640px, 100%); text-align: left; }
 .steps { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; color: var(--text-dim); }
 .steps li::marker { color: var(--accent); font-weight: 800; }
 .steps strong { display: block; color: var(--text); margin-bottom: 2px; }

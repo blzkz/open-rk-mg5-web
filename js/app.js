@@ -304,12 +304,14 @@ function applyModel(model) {
 
 // -- connection ----------------------------------------------------------------
 
-function showStatus(title, description, { action = "Reintentar", onAction = reconnect, linuxHelp = false } = {}) {
+function showStatus(title, description, { action = "Reintentar", onAction = reconnect, linuxHelp = false, deviceInfo = null } = {}) {
   clearTimeout(state.retryTimer);
   state.config = null;
   $("status-title").textContent = title;
   $("status-description").textContent = description;
   $("linux-help").hidden = !linuxHelp;
+  $("device-info-box").hidden = !deviceInfo;
+  $("device-info").textContent = deviceInfo ?? "";
   const button = $("status-action");
   button.hidden = !action;
   button.textContent = action || "";
@@ -346,8 +348,18 @@ async function requestMouse() {
     toast(`No se pudo abrir el selector: ${e.message}`);
     return;
   }
+  if (!devices.length) return;
   const device = devices.find(p.isConfigInterface);
-  if (device) await connectDevice(device);
+  if (device) {
+    await connectDevice(device);
+    return;
+  }
+  // The browser gave us the mouse, but none of its interfaces looks like the config channel we know.
+  showStatus(
+    "No reconozco la interfaz de configuración",
+    "El navegador ha dado acceso al ratón, pero ninguna de sus interfaces es la que esperaba el panel, así que no le he enviado nada. Copia estos datos y mándalos en un issue para poder darle soporte:",
+    { action: "Conectar ratón", onAction: requestMouse, deviceInfo: p.describeDevices(devices) },
+  );
 }
 
 async function disconnectMouse() {
@@ -760,6 +772,14 @@ async function init() {
     if (file) importProfile(file);
   });
   $("refresh").addEventListener("click", reconnect);
+  $("copy-device-info").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText($("device-info").textContent);
+      toast("Datos copiados");
+    } catch {
+      toast("No se pudo copiar: selecciónalo y cópialo a mano");
+    }
+  });
   $("udev-command").textContent = UDEV_COMMAND;
   $("copy-command").addEventListener("click", async () => {
     try {

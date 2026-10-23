@@ -100,8 +100,12 @@ export const M30_MODEL = {
 };
 export const MODELS = [MG5_MODEL, M30_MODEL];
 
+// The M30 is matched by VID/PID only: its feature report 9 may live on a different interface than the
+// 0xFF00 collection, and a usagePage filter would hide that interface from the picker.
 export const HID_FILTERS = MODELS.flatMap((m) =>
-  [m.donglePid, m.wiredPid].map((productId) => ({ vendorId: m.vendorId, productId, usagePage: CONFIG_USAGE_PAGE })),
+  [m.donglePid, m.wiredPid].map((productId) =>
+    m.protocol === "m30" ? { vendorId: m.vendorId, productId } : { vendorId: m.vendorId, productId, usagePage: CONFIG_USAGE_PAGE },
+  ),
 );
 
 export class MG5Error extends Error {}
@@ -196,16 +200,59 @@ export function modelFor(device) {
   return MODELS.find((m) => device.vendorId === m.vendorId && [m.donglePid, m.wiredPid].includes(device.productId)) ?? null;
 }
 
+// Every collection of the device, nested ones included (WebHID lists reports declared inside a child
+// collection only on that child).
+export function allCollections(device) {
+  const out = [];
+  const walk = (list) => {
+    for (const c of list ?? []) {
+      out.push(c);
+      walk(c.children);
+    }
+  };
+  walk(device.collections);
+  return out;
+}
+
 export function isConfigInterface(device) {
   const model = modelFor(device);
   if (!model) return false;
+  const collections = allCollections(device);
   if (model.protocol === "m30") {
-    // 0x258A is a generic SinoWealth vendor id: also require feature report 9 on the vendor page.
-    return device.collections.some(
-      (c) => c.usagePage === CONFIG_USAGE_PAGE && (c.featureReports ?? []).some((r) => r.reportId === M30_REPORT_ID),
+    // 0x258A is a generic SinoWealth vendor id: also require a vendor page and feature report 9.
+    return (
+      collections.some((c) => c.usagePage >= 0xff00) &&
+      collections.some((c) => (c.featureReports ?? []).some((r) => r.reportId === M30_REPORT_ID))
     );
   }
-  return device.collections.some((c) => c.usagePage === CONFIG_USAGE_PAGE);
+  return collections.some((c) => c.usagePage === CONFIG_USAGE_PAGE);
+}
+
+// Length in bytes of a WebHID report, from its items.
+function reportBytes(report) {
+  const bits = (report.items ?? []).reduce((sum, item) => sum + (item.reportSize ?? 0) * (item.reportCount ?? 0), 0);
+  return Math.ceil(bits / 8);
+}
+
+const hex4 = (n) => (n ?? 0).toString(16).padStart(4, "0");
+
+// Plain-text summary of the HID interfaces the browser gave us, for bug reports about unknown mice.
+export function describeDevices(devices) {
+  const lines = [];
+  for (const device of devices) {
+    lines.push(`${device.productName || "?"} ${hex4(device.vendorId)}:${hex4(device.productId)}`);
+    const walk = (list, depth) => {
+      for (const c of list ?? []) {
+        const reports = ["input", "output", "feature"].flatMap((kind) =>
+          (c[`${kind}Reports`] ?? []).map((r) => `${kind} ${r.reportId} (${reportBytes(r)} B)`),
+        );
+        lines.push(`${"  ".repeat(depth)}- página 0x${hex4(c.usagePage)} uso 0x${hex4(c.usage)}${reports.length ? ": " + reports.join(", ") : ""}`);
+        walk(c.children, depth + 1);
+      }
+    };
+    walk(device.collections, 1);
+  }
+  return lines.join("\n");
 }
 
 // Wraps an HIDDevice with the backend for its model's protocol.

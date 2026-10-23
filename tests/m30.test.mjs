@@ -171,8 +171,8 @@ test("M30 never writes after a bad read", async () => {
 
 test("models, filters and config interface", () => {
   assert.ok(p.HID_FILTERS.some((f) => f.vendorId === 0x372e && f.productId === 0x103f && f.usagePage === 0xff00));
-  assert.ok(p.HID_FILTERS.some((f) => f.vendorId === 0x258a && f.productId === 0x0136 && f.usagePage === 0xff00));
-  assert.ok(p.HID_FILTERS.some((f) => f.vendorId === 0x258a && f.productId === 0x0138 && f.usagePage === 0xff00));
+  assert.ok(p.HID_FILTERS.some((f) => f.vendorId === 0x258a && f.productId === 0x0136 && f.usagePage === undefined));
+  assert.ok(p.HID_FILTERS.some((f) => f.vendorId === 0x258a && f.productId === 0x0138 && f.usagePage === undefined));
   const collection = (reportId) => ({ usagePage: 0xff00, featureReports: [{ reportId }] });
   const mg5 = { vendorId: 0x372e, productId: 0x103f, collections: [{ usagePage: 0xff00 }] };
   const m30 = { vendorId: 0x258a, productId: 0x0136, collections: [collection(9)] };
@@ -181,6 +181,13 @@ test("models, filters and config interface", () => {
   assert.ok(p.isConfigInterface(m30));
   assert.ok(!p.isConfigInterface(other));
   assert.ok(!p.isConfigInterface({ vendorId: 0x258a, productId: 0x0036, collections: [collection(9)] }));
+  // Reports declared in a nested collection, or on a sibling of the vendor collection.
+  const nested = { vendorId: 0x258a, productId: 0x0138, collections: [{ usagePage: 0xff00, children: [{ usagePage: 0xff00, featureReports: [{ reportId: 9 }] }] }] };
+  const sibling = { vendorId: 0x258a, productId: 0x0138, collections: [{ usagePage: 0xff00 }, { usagePage: 0xff02, featureReports: [{ reportId: 9 }] }] };
+  const noVendorPage = { vendorId: 0x258a, productId: 0x0138, collections: [{ usagePage: 0x000c, featureReports: [{ reportId: 9 }] }] };
+  assert.ok(p.isConfigInterface(nested));
+  assert.ok(p.isConfigInterface(sibling));
+  assert.ok(!p.isConfigInterface(noVendorPage));
   assert.ok(p.openMouse(mg5) instanceof p.MG5);
   assert.equal(p.openMouse(m30).model, p.M30_MODEL);
   assert.ok(!p.openMouse(m30).wireless);
@@ -194,4 +201,35 @@ test("profiles remember their model", async () => {
   const device = new FakeDevice(sampleBlock());
   await assert.rejects(applyProfile(defaultProfile("MG5"), mouseFor(device)), /es de un RK MG5/);
   assert.equal(device.writes.length, 0);
+});
+
+test("the M30 picker filter doesn't hide interfaces by usage page", () => {
+  const m30Filters = p.HID_FILTERS.filter((f) => f.vendorId === 0x258a);
+  assert.equal(m30Filters.length, 2);
+  assert.ok(m30Filters.every((f) => f.usagePage === undefined));
+  assert.ok(p.HID_FILTERS.filter((f) => f.vendorId === 0x372e).every((f) => f.usagePage === 0xff00));
+});
+
+test("describeDevices summarises interfaces and report sizes", () => {
+  const device = {
+    productName: "2.4G Wireless Receiver",
+    vendorId: 0x258a,
+    productId: 0x0138,
+    collections: [
+      {
+        usagePage: 0xff00,
+        usage: 1,
+        inputReports: [{ reportId: 8, items: [{ reportSize: 8, reportCount: 16 }] }],
+        children: [{ usagePage: 0xff00, usage: 2, featureReports: [{ reportId: 9, items: [{ reportSize: 8, reportCount: 518 }] }] }],
+      },
+    ],
+  };
+  assert.equal(
+    p.describeDevices([device]),
+    [
+      "2.4G Wireless Receiver 258a:0138",
+      "  - página 0xff00 uso 0x0001: input 8 (16 B)",
+      "    - página 0xff00 uso 0x0002: feature 9 (518 B)",
+    ].join("\n"),
+  );
 });
