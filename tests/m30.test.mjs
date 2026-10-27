@@ -246,6 +246,9 @@ test("M30 button table", () => {
   assert.equal(hex(p.buildM30KeyTable(p.M30_DEFAULT_KEYS).slice(0, 24)), "010101000102010001030100010501000104010005040000");
   assert.throws(() => p.buildM30KeyTable([0x01020100, 0x01020100, 0x01030100, 0x01050100, 0x01040100, 0x05040000]), /clic izquierdo/);
   assert.throws(() => p.buildM30KeyTable([0x01010100]), p.MG5Error);
+  // Same frame as rk_mg5/protocol.py in the desktop app.
+  const frame = p.buildM30Frame(p.M30_CMD_SET_KEYS, 0, p.buildM30KeyTable(p.M30_DEFAULT_KEYS));
+  assert.equal(hex(frame.slice(0, 31)), "74010001005000010101000102010001030100010501000104010005040000");
 });
 
 test("M30 setKey writes the whole table with one change", async () => {
