@@ -24,8 +24,10 @@ También reconoce el **Royal Kludge M30** (`258a:0138` receptor 2.4G, `258a:0136
 distinto sacado del configurador web oficial. **Nadie lo ha probado todavía con un M30 real.** El panel muestra
 un aviso cuando hay uno conectado y solo ofrece lo que tiene: DPI 100–24000 en pasos de 100, hasta 6 niveles,
 sondeo hasta 1000 Hz, LOD, debounce (1–15 ms), Motion Sync, Ripple Control, corrección de ángulo y reposo.
-No hay batería, modo del sensor ni modo cristal, y la reasignación de botones está desactivada porque el M30
-no permite leerla. Cada cambio se comprueba releyendo el ratón; si no coincide, el panel da error y no insiste.
+También se pueden reasignar los seis botones. No hay batería, modo del sensor ni modo cristal. Cada cambio de
+configuración se comprueba releyendo el ratón; si no coincide, el panel da error y no insiste. Los botones, en cambio,
+no se pueden leer del M30: el panel muestra la distribución de fábrica o la última que pusiste desde aquí, cada cambio
+reescribe los seis botones y hay un botón para restaurar los de fábrica.
 
 ![Personalizar](docs/screenshot.png)
 ![Rendimiento](docs/screenshot-performance.png)

@@ -77,6 +77,7 @@ export const MG5_MODEL = {
   sensorMode: true,
   glassMode: true,
   keyRemap: true,
+  keyReadback: true,
   experimental: false,
 };
 // From the official web configurator (assets/index-BSYKKems.js). Nobody has tested it on a real M30 yet.
@@ -95,7 +96,9 @@ export const M30_MODEL = {
   battery: false,
   sensorMode: false,
   glassMode: false,
-  keyRemap: false,
+  // Buttons can be written but not read back: the panel keeps the layout it last wrote.
+  keyRemap: true,
+  keyReadback: false,
   experimental: true,
 };
 export const MODELS = [MG5_MODEL, M30_MODEL];
@@ -450,6 +453,7 @@ export const M30_FRAME_LEN = 519;
 export const M30_PAYLOAD_OFFSET = 7;
 export const M30_CONFIG_LEN = 400;
 
+export const M30_CMD_SET_KEYS = 0x01;
 export const M30_CMD_SET_CONFIG = 0x04;
 export const M30_CMD_GET_CONFIG = 0x44;
 export const M30_CMD_FW_VERSION = 0x48;
@@ -466,6 +470,21 @@ export const M30_OFF_DPI_COLORS = 47;
 export const M30_OFF_SLEEP = 74; // minutes
 
 export const M30_REPORT_RATES = { 125: 1, 250: 2, 500: 3, 1000: 4 };
+
+// Button table sent with 0x01: one big-endian u32 keyRaw per button (left, right, middle, forward,
+// back, DPI), zero-padded to 80 bytes. Same keyRaw values as the MG5 (see actions.js).
+export const M30_KEY_TABLE_LEN = 80;
+const LEFT_CLICK = 0x01010100;
+export const M30_DEFAULT_KEYS = [0x01010100, 0x01020100, 0x01030100, 0x01050100, 0x01040100, 0x05040000];
+
+export function buildM30KeyTable(keys) {
+  if (keys.length !== KEY_COUNT) throw new MG5Error(`Hacen falta ${KEY_COUNT} botones, no ${keys.length}`);
+  // Never leave the mouse without a left click.
+  if (!keys.some((k) => k >>> 0 === LEFT_CLICK)) throw new MG5Error("Algún botón tiene que ser el clic izquierdo");
+  const table = new Uint8Array(M30_KEY_TABLE_LEN);
+  keys.forEach((k, i) => table.set(u32be(k >>> 0), i * 4));
+  return table;
+}
 const M30_REPORT_RATE_BY_ID = Object.fromEntries(Object.entries(M30_REPORT_RATES).map(([hz, id]) => [id, Number(hz)]));
 
 export function encodeM30Dpi(dpi) {
@@ -596,6 +615,9 @@ export class M30 {
   constructor(device) {
     this.device = device;
     this._lock = Promise.resolve();
+    // The M30 can't report its buttons: this is the layout the panel last wrote, or assumes
+    // (the active profile's or the factory one). The app seeds it after connecting.
+    this.keys = [...M30_DEFAULT_KEYS];
   }
 
   get model() {
@@ -660,8 +682,9 @@ export class M30 {
     return new M30Config(parseM30Config(resp));
   }
 
+  // Not read from the mouse (it has no command for it): see `keys`.
   async readKeys() {
-    throw new MG5Error("El RK M30 no permite leer la asignación de botones");
+    return [...this.keys];
   }
 
   // {mouse, receiver} firmware versions; the receiver one is only meaningful over 2.4G.
@@ -710,8 +733,19 @@ export class M30 {
     await this._modify([[M30_OFF_SLEEP, Math.floor(seconds / 60), 0xff]]);
   }
 
-  async setKey() {
-    throw new MG5Error("La reasignación de botones no está disponible para el RK M30");
+  // Writes the whole button table, as the official app does. There is no way to read it back.
+  async setKeys(keys) {
+    const table = buildM30KeyTable(keys);
+    // A config read first, so a sleeping or absent mouse fails here instead of losing the write.
+    await this.readConfig();
+    await this._request(M30_CMD_SET_KEYS, 0, table, 4, 40);
+    this.keys = keys.map((k) => k >>> 0);
+  }
+
+  async setKey(index, raw) {
+    const keys = [...this.keys];
+    keys[index] = raw >>> 0;
+    await this.setKeys(keys);
   }
 
   async setDpiValue(level, dpi) {

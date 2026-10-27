@@ -180,6 +180,7 @@ function buildCustomize() {
 
   $("key-capture").addEventListener("click", () => (state.capturingKey ? stopKeyCapture() : startKeyCapture()));
   $("reset-button").addEventListener("click", () => assign(a.DEFAULT_KEYS[state.selectedButton]));
+  $("factory-buttons").addEventListener("click", () => apply((m) => m.setKeys([...a.DEFAULT_KEYS])));
   window.addEventListener("keydown", onKeyDown, true);
 }
 
@@ -289,7 +290,7 @@ function applyModel(model) {
   $("experimental-model").textContent = model.name;
   $("battery").hidden = !model.battery;
   $("battery-section").hidden = !model.battery;
-  $("remap-notice").hidden = model.keyRemap;
+  $("remap-notice").hidden = model.keyReadback;
   $("remap-controls").hidden = !model.keyRemap;
   for (const { dpi } of ui.levelRows) dpi.configure({ min: model.dpiMin, max: model.dpiMax, step: model.dpiStep });
   ui.rates.forEach((hz, i) => (ui.rateSegments.buttons[i].hidden = !model.reportRates.includes(hz)));
@@ -401,6 +402,7 @@ async function connectDevice(device, { retrying = false } = {}) {
     return;
   }
   state.mouse = mouse;
+  if (!mouse.model.keyReadback) mouse.keys = knownKeys(mouse.model);
   device.addEventListener("inputreport", onInputReport);
   await loadFromMouse();
 }
@@ -445,6 +447,16 @@ async function loadFromMouse({ quiet = false } = {}) {
   loadKeys();
   showSettings();
   ensureProfile();
+}
+
+// For mice that can't report their buttons: the layout of the active profile for this model
+// (the last one set from the panel), else the factory one.
+function knownKeys(model) {
+  const profile = profiles.get(profiles.active);
+  if (profile && profile.model === model.name && profile.buttons.length === p.KEY_COUNT) {
+    return profile.buttons.map((value) => parseInt(value, 16) >>> 0);
+  }
+  return [...a.DEFAULT_KEYS];
 }
 
 // Without a way to read the buttons, keep the factory layout just for the labels.
