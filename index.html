@@ -109,8 +109,11 @@
         <div class="panel" data-panel="customize">
           <h2 class="panel-title">PERSONALIZAR</h2>
           <p class="panel-subtitle">Haz clic en un botón del dibujo para cambiar lo que hace.</p>
-          <p class="panel-subtitle" id="remap-notice" hidden>Este ratón no permite leer qué hace cada botón, así que la
-            reasignación está desactivada para no sobrescribir su configuración a ciegas.</p>
+          <div class="remap-notice" id="remap-notice" hidden>
+            <p class="panel-subtitle">Este ratón no permite leer qué hace cada botón: el panel muestra la distribución de
+              fábrica o la última que pusiste desde aquí, y cada cambio reescribe los seis botones.</p>
+            <button type="button" class="flat-button" id="factory-buttons">Restaurar botones de fábrica</button>
+          </div>
           <div id="remap-controls" class="remap-controls">
           <div class="section-label" id="button-title"></div>
           <div id="action-groups"></div>

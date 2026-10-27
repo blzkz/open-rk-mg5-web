@@ -37,6 +37,7 @@ class FakeDevice {
     this.opened = true;
     this.pending = new Uint8Array(4);
     this.writes = [];
+    this.keyWrites = [];
   }
 
   async sendFeatureReport(reportId, data) {
@@ -48,6 +49,9 @@ class FakeDevice {
     const payload = data.slice(p.M30_PAYLOAD_OFFSET, p.M30_PAYLOAD_OFFSET + length);
     if (cmd === p.M30_CMD_GET_CONFIG) {
       this.pending = p.buildM30Frame(cmd, 0, this.block);
+    } else if (cmd === p.M30_CMD_SET_KEYS) {
+      this.keyWrites.push([para, payload]);
+      this.pending = p.buildM30Frame(cmd, 0, []);
     } else if (cmd === p.M30_CMD_SET_CONFIG) {
       this.writes.push([para, payload]);
       if (this.accept.includes(para)) this.block = Uint8Array.from(payload);
@@ -232,4 +236,49 @@ test("describeDevices summarises interfaces and report sizes", () => {
       "    - página 0xff00 uso 0x0002: feature 9 (518 B)",
     ].join("\n"),
   );
+});
+
+test("M30 button table", () => {
+  const table = p.buildM30KeyTable([0x01010100, 0x01020100, 0x01030100, 0x00010006, 0x020000e9, 0x05040000]);
+  assert.equal(table.length, 80);
+  assert.equal(hex(table.slice(0, 24)), "01010100010201000103010000010006020000e905040000");
+  assert.ok(table.slice(24).every((b) => b === 0));
+  assert.equal(hex(p.buildM30KeyTable(p.M30_DEFAULT_KEYS).slice(0, 24)), "010101000102010001030100010501000104010005040000");
+  assert.throws(() => p.buildM30KeyTable([0x01020100, 0x01020100, 0x01030100, 0x01050100, 0x01040100, 0x05040000]), /clic izquierdo/);
+  assert.throws(() => p.buildM30KeyTable([0x01010100]), p.MG5Error);
+});
+
+test("M30 setKey writes the whole table with one change", async () => {
+  const device = new FakeDevice(sampleBlock());
+  const mouse = mouseFor(device);
+  mouse.keys = [0x01010100, 0x01020100, 0x01030100, 0x020000e9, 0x01040100, 0x05040000];
+  await mouse.setKey(4, 0x020000ea);
+  assert.equal(device.keyWrites.length, 1);
+  const [para, payload] = device.keyWrites[0];
+  assert.equal(para, 0);
+  assert.equal(payload.length, 80);
+  assert.equal(hex(payload.slice(0, 24)), "010101000102010001030100020000e9020000ea05040000");
+  assert.deepEqual(await mouse.readKeys(), [0x01010100, 0x01020100, 0x01030100, 0x020000e9, 0x020000ea, 0x05040000]);
+  assert.equal(device.writes.length, 0); // the config block is untouched
+});
+
+test("M30 button writes refuse a bad state", async () => {
+  const asleep = new FakeDevice(new Uint8Array(400));
+  await assert.rejects(mouseFor(asleep).setKey(3, 0x020000e9), p.MG5Error);
+  assert.equal(asleep.keyWrites.length, 0);
+  const device = new FakeDevice(sampleBlock());
+  const mouse = mouseFor(device);
+  await assert.rejects(mouse.setKey(0, 0x01020100), /clic izquierdo/);
+  assert.equal(device.keyWrites.length, 0);
+  assert.deepEqual(await mouse.readKeys(), p.M30_DEFAULT_KEYS);
+});
+
+test("M30 profiles always rewrite the whole button table", async () => {
+  const device = new FakeDevice(sampleBlock());
+  const mouse = mouseFor(device);
+  const c = new p.M30Config(sampleBlock());
+  const profile = profileFromMouse("M30", c, p.M30_DEFAULT_KEYS, p.M30_MODEL.name);
+  await applyProfile(profile, mouse);
+  assert.equal(device.keyWrites.length, 1);
+  assert.equal(hex(device.keyWrites[0][1].slice(0, 24)), "010101000102010001030100010501000104010005040000");
 });

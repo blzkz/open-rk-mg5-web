@@ -82,10 +82,15 @@ export async function applyProfile(profile, mouse) {
   }
   const config = await mouse.readConfig();
   if (mouse.model.keyRemap) {
-    const keys = await mouse.readKeys();
-    for (const [index, value] of profile.buttons.entries()) {
-      const raw = parseInt(value, 16) >>> 0;
-      if (keys[index] !== raw) await mouse.setKey(index, raw);
+    const buttons = profile.buttons.map((value) => parseInt(value, 16) >>> 0);
+    if (!mouse.model.keyReadback) {
+      // What the mouse has can't be read, so always write the whole table.
+      await mouse.setKeys(buttons);
+    } else {
+      const keys = await mouse.readKeys();
+      for (const [index, raw] of buttons.entries()) {
+        if (keys[index] !== raw) await mouse.setKey(index, raw);
+      }
     }
   }
   for (let level = 1; level <= p.DPI_LEVELS; level++) {

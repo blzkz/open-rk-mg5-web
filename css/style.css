@@ -157,7 +157,7 @@ main { flex: 1; min-height: 0; display: flex; }
   background: var(--panel-bg);
 }
 .panel { display: flex; flex-direction: column; gap: 14px; padding: 22px; }
-.remap-controls, .battery-section { display: flex; flex-direction: column; gap: 14px; }
+.remap-controls, .remap-notice, .battery-section { display: flex; flex-direction: column; gap: 14px; }
 
 .banner {
   padding: 8px 16px;
