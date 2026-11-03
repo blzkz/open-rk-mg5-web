@@ -179,8 +179,8 @@ function buildCustomize() {
   container.style.display = "contents";
 
   $("key-capture").addEventListener("click", () => (state.capturingKey ? stopKeyCapture() : startKeyCapture()));
-  $("reset-button").addEventListener("click", () => assign(a.DEFAULT_KEYS[state.selectedButton]));
-  $("factory-buttons").addEventListener("click", () => apply((m) => m.setKeys([...a.DEFAULT_KEYS])));
+  $("reset-button").addEventListener("click", () => assign(defaultKeys()[state.selectedButton]));
+  $("factory-buttons").addEventListener("click", () => apply((m) => m.setKeys([...m.model.defaultKeys])));
   window.addEventListener("keydown", onKeyDown, true);
 }
 
@@ -292,6 +292,7 @@ function applyModel(model) {
   $("battery-section").hidden = !model.battery;
   $("remap-notice").hidden = model.keyReadback;
   $("remap-controls").hidden = !model.keyRemap;
+  mouseView.setSideSwapped(model.sideSwapped);
   for (const { dpi } of ui.levelRows) dpi.configure({ min: model.dpiMin, max: model.dpiMax, step: model.dpiStep });
   ui.rates.forEach((hz, i) => (ui.rateSegments.buttons[i].hidden = !model.reportRates.includes(hz)));
   $("rate-hint").hidden = Math.max(...model.reportRates) <= 1000;
@@ -456,7 +457,17 @@ function knownKeys(model) {
   if (profile && profile.model === model.name && profile.buttons.length === p.KEY_COUNT) {
     return profile.buttons.map((value) => parseInt(value, 16) >>> 0);
   }
-  return [...a.DEFAULT_KEYS];
+  return [...model.defaultKeys];
+}
+
+function defaultKeys() {
+  return state.mouse ? state.mouse.model.defaultKeys : a.DEFAULT_KEYS;
+}
+
+// Button names follow the physical position, which for some models (the M30) swaps keys 3 and 4.
+function buttonName(index) {
+  const swapped = state.mouse?.model.sideSwapped && (index === 3 || index === 4);
+  return a.BUTTON_NAMES[swapped ? 7 - index : index];
 }
 
 // Without a way to read the buttons, keep the factory layout just for the labels.
@@ -573,7 +584,7 @@ function selectButton(index) {
   state.selectedButton = index;
   mouseView.setSelected(index);
   const current = state.keys[index];
-  $("button-title").textContent = `${a.BUTTON_NAMES[index].toUpperCase()} · ${a.describe(current)}`;
+  $("button-title").textContent = `${buttonName(index).toUpperCase()} · ${a.describe(current)}`;
   for (const [raw, row] of ui.actionRows) row.classList.toggle("current", raw === current);
   $("key-subtitle").textContent = a.isKeyboard(current) ? a.describe(current) : "Asigna una tecla, con Ctrl/Mayús/Alt si quieres";
   stopKeyCapture();
