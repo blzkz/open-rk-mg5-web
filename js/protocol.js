@@ -78,6 +78,9 @@ export const MG5_MODEL = {
   glassMode: true,
   keyRemap: true,
   keyReadback: true,
+  // Factory button table, by key index (left, right, middle, front side, rear side, DPI).
+  defaultKeys: [0x01010100, 0x01020100, 0x01030100, 0x01050100, 0x01040100, 0x05040000],
+  sideSwapped: false,
   experimental: false,
 };
 // From the official web configurator (assets/index-BSYKKems.js). Nobody has tested it on a real M30 yet.
@@ -99,6 +102,11 @@ export const M30_MODEL = {
   // Buttons can be written but not read back: the panel keeps the layout it last wrote.
   keyRemap: true,
   keyReadback: false,
+  // Key 3 is the rear side button and key 4 the front one, the other way round from the MG5.
+  get defaultKeys() {
+    return M30_DEFAULT_KEYS;
+  },
+  sideSwapped: true,
   experimental: true,
 };
 export const MODELS = [MG5_MODEL, M30_MODEL];
@@ -471,11 +479,13 @@ export const M30_OFF_SLEEP = 74; // minutes
 
 export const M30_REPORT_RATES = { 125: 1, 250: 2, 500: 3, 1000: 4 };
 
-// Button table sent with 0x01: one big-endian u32 keyRaw per button (left, right, middle, forward,
-// back, DPI), zero-padded to 80 bytes. Same keyRaw values as the MG5 (see actions.js).
+// Button table sent with 0x01: one big-endian u32 keyRaw per button (left, right, middle, rear side,
+// front side, DPI), zero-padded to 80 bytes. Same keyRaw values as the MG5 (see actions.js).
+// The official app's M30 layout puts back (0x01040100) on key 3 and forward on key 4, but the table it
+// sends is the MG5's, with the side buttons swapped; a tester confirmed the layout is the right one.
 export const M30_KEY_TABLE_LEN = 80;
 const LEFT_CLICK = 0x01010100;
-export const M30_DEFAULT_KEYS = [0x01010100, 0x01020100, 0x01030100, 0x01050100, 0x01040100, 0x05040000];
+export const M30_DEFAULT_KEYS = [0x01010100, 0x01020100, 0x01030100, 0x01040100, 0x01050100, 0x05040000];
 
 export function buildM30KeyTable(keys) {
   if (keys.length !== KEY_COUNT) throw new MG5Error(`Hacen falta ${KEY_COUNT} botones, no ${keys.length}`);

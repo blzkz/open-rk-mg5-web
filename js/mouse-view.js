@@ -90,6 +90,9 @@ export class MouseView {
     this.hovered = null;
     this.showCallouts = true;
     this.badge = null;
+    // Callouts and regions follow the drawing; sideSwapped maps the side buttons to the other key indexes.
+    this.callouts = CALLOUTS;
+    this.sideSwapped = false;
 
     this.svg = document.createElementNS(SVG_NS, "svg");
     this.svg.classList.add("mouse-svg");
@@ -101,9 +104,9 @@ export class MouseView {
     stage.append(this.svg);
 
     for (const region of this.mouse.querySelectorAll(".region")) {
-      const index = Number(region.dataset.index);
-      region.addEventListener("click", () => this.showCallouts && this._select(index));
-      region.addEventListener("pointerenter", () => this._hover(index));
+      const slot = Number(region.dataset.index);
+      region.addEventListener("click", () => this.showCallouts && this._select(this._key(slot)));
+      region.addEventListener("pointerenter", () => this._hover(this._key(slot)));
       region.addEventListener("pointerleave", () => this._hover(null));
     }
 
@@ -131,6 +134,13 @@ export class MouseView {
 
   setLabels(names) {
     for (const [index, name] of Object.entries(names)) this.labels[index].textContent = name;
+    this.layout();
+  }
+
+  // On some mice (the M30) key 3 is the rear side button and key 4 the front one.
+  setSideSwapped(swapped) {
+    this.sideSwapped = swapped;
+    this.callouts = CALLOUTS.map((c) => ({ ...c, index: this._key(c.index) }));
     this.layout();
   }
 
@@ -179,7 +189,7 @@ export class MouseView {
     const gap = width < 640 ? 30 : 56;
     const reach = gap - 6;
     let lines = "";
-    for (const callout of CALLOUTS) {
+    for (const callout of this.callouts) {
       const button = this.labels[callout.index];
       button.hidden = !this.showCallouts;
       if (!this.showCallouts) continue;
@@ -207,13 +217,18 @@ export class MouseView {
 
   _paintRegions() {
     for (const region of this.mouse.querySelectorAll(".region")) {
-      const index = Number(region.dataset.index);
+      const index = this._key(Number(region.dataset.index));
       region.classList.toggle("hovered", this.showCallouts && index === this.hovered);
       region.classList.toggle("selected", this.showCallouts && index === this.selected);
     }
   }
 
   // -- interaction -------------------------------------------------------------
+
+  // Key index of a drawing slot (and the other way round).
+  _key(slot) {
+    return this.sideSwapped && (slot === 3 || slot === 4) ? 7 - slot : slot;
+  }
 
   _select(index) {
     this.setSelected(index);

@@ -243,12 +243,12 @@ test("M30 button table", () => {
   assert.equal(table.length, 80);
   assert.equal(hex(table.slice(0, 24)), "01010100010201000103010000010006020000e905040000");
   assert.ok(table.slice(24).every((b) => b === 0));
-  assert.equal(hex(p.buildM30KeyTable(p.M30_DEFAULT_KEYS).slice(0, 24)), "010101000102010001030100010501000104010005040000");
+  assert.equal(hex(p.buildM30KeyTable(p.M30_DEFAULT_KEYS).slice(0, 24)), "010101000102010001030100010401000105010005040000");
   assert.throws(() => p.buildM30KeyTable([0x01020100, 0x01020100, 0x01030100, 0x01050100, 0x01040100, 0x05040000]), /clic izquierdo/);
   assert.throws(() => p.buildM30KeyTable([0x01010100]), p.MG5Error);
   // Same frame as rk_mg5/protocol.py in the desktop app.
   const frame = p.buildM30Frame(p.M30_CMD_SET_KEYS, 0, p.buildM30KeyTable(p.M30_DEFAULT_KEYS));
-  assert.equal(hex(frame.slice(0, 31)), "74010001005000010101000102010001030100010501000104010005040000");
+  assert.equal(hex(frame.slice(0, 31)), "74010001005000010101000102010001030100010401000105010005040000");
 });
 
 test("M30 setKey writes the whole table with one change", async () => {
@@ -283,5 +283,14 @@ test("M30 profiles always rewrite the whole button table", async () => {
   const profile = profileFromMouse("M30", c, p.M30_DEFAULT_KEYS, p.M30_MODEL.name);
   await applyProfile(profile, mouse);
   assert.equal(device.keyWrites.length, 1);
-  assert.equal(hex(device.keyWrites[0][1].slice(0, 24)), "010101000102010001030100010501000104010005040000");
+  assert.equal(hex(device.keyWrites[0][1].slice(0, 24)), "010101000102010001030100010401000105010005040000");
+});
+
+test("each model has its own factory buttons and side order", async () => {
+  const { DEFAULT_KEYS } = await import("../js/actions.js");
+  assert.deepEqual(p.MG5_MODEL.defaultKeys, DEFAULT_KEYS);
+  assert.equal(p.MG5_MODEL.sideSwapped, false);
+  // M30: key 3 (rear side button) = back, key 4 (front side button) = forward.
+  assert.deepEqual(p.M30_MODEL.defaultKeys, [0x01010100, 0x01020100, 0x01030100, 0x01040100, 0x01050100, 0x05040000]);
+  assert.equal(p.M30_MODEL.sideSwapped, true);
 });
